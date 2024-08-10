@@ -56,7 +56,7 @@ public class GitService
         }
 
         _applicationStateService.RemoveState(key);
-
+        
         return success;
     }
 

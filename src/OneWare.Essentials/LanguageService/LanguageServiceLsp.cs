@@ -35,6 +35,11 @@ public abstract class LanguageServiceLsp(string name, string? workspace) : Langu
     protected string? Arguments { get; set; }
     protected string? ExecutablePath { get; set; }
 
+    public virtual void SetCustomOptions(LanguageClientOptions options)
+    {
+        
+    }
+    
     public override async Task ActivateAsync()
     {
         if (IsActivated) return;
@@ -59,7 +64,7 @@ public abstract class LanguageServiceLsp(string name, string? workspace) : Langu
             {
                 await websocket.ConnectAsync(new Uri(ExecutablePath), _cancellation.Token);
 
-                await InitAsync(websocket.UsePipeReader().AsStream(), websocket.UsePipeWriter().AsStream());
+                await InitAsync(websocket.UsePipeReader().AsStream(), websocket.UsePipeWriter().AsStream(), SetCustomOptions);
                 return;
             }
             catch (Exception e)
@@ -103,7 +108,7 @@ public abstract class LanguageServiceLsp(string name, string? workspace) : Langu
                     Console.WriteLine("ERR:" + reader.ReadToEnd());
             }, _cancellation.Token);
 
-            await InitAsync(_process.StandardOutput, _process.StandardInput);
+            await InitAsync(_process.StandardOutput, _process.StandardInput, SetCustomOptions);
 
             await _process.WaitForExitAsync();
 
@@ -142,7 +147,7 @@ public abstract class LanguageServiceLsp(string name, string? workspace) : Langu
         _process?.Kill();
     }
 
-    private async Task InitAsync(Stream input, Stream output, Action<LanguageClientOptions>? customOptions = null)
+    private async Task InitAsync(Stream input, Stream output, Action<LanguageClientOptions> customOptions)
     {
         Client = LanguageClient.PreInit(
             options =>
@@ -524,7 +529,7 @@ public abstract class LanguageServiceLsp(string name, string? workspace) : Langu
         CompletionTriggerKind triggerKind, string? triggerChar)
     {
         var cts = new CancellationTokenSource();
-        cts.CancelAfter(1000);
+        cts.CancelAfter(100000);
         if (Client?.ServerSettings.Capabilities.CompletionProvider == null) return null;
         try
         {

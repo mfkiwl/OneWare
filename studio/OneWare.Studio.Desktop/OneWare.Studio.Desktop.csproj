@@ -31,6 +31,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\src\OneWare.AiAssistant\OneWare.AiAssistant.csproj" />
         <ProjectReference Include="..\..\src\OneWare.PackageManager\OneWare.PackageManager.csproj"/>
         <ProjectReference Include="..\..\src\OneWare.SourceControl\OneWare.SourceControl.csproj"/>
         <ProjectReference Include="..\..\src\OneWare.TerminalManager\OneWare.TerminalManager.csproj"/>

@@ -29,8 +29,6 @@ public class EnvironmentService : IEnvironmentService
 
     private void UpdateEnvironment()
     {
-        //var currentPath = Environment.GetEnvironmentVariable("PATH");
-
         var pathSeparator = PlatformHelper.Platform switch
         {
             PlatformId.WinArm64 or PlatformId.WinX64 => ';',

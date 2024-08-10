@@ -1040,7 +1040,7 @@ public class SourceControlViewModel : ExtendedTool
             new CompareOptions { ContextLines = contextLines });
     }
 
-    public async Task CompareChangesAsync(string path, string titlePrefix, int contextLines = 3,
+    private async Task CompareChangesAsync(string path, string titlePrefix, int contextLines = 3,
         bool switchTab = true)
     {
         if (CurrentRepo == null) return;
@@ -1079,7 +1079,7 @@ public class SourceControlViewModel : ExtendedTool
         await MergeAllAsync(path, MergeMode.KeepCurrent);
     }
 
-    public async Task MergeAllAsync(string path, MergeMode mode)
+    private async Task MergeAllAsync(string path, MergeMode mode)
     {
         var file = await OpenFileAsync(path);
         if (file == null) return;
@@ -1097,7 +1097,7 @@ public class SourceControlViewModel : ExtendedTool
 
     #region Credentials & Identity
 
-    public async Task<Signature?> GetSignatureAsync()
+    private async Task<Signature?> GetSignatureAsync()
     {
         if (CurrentRepo == null) return null;
 
@@ -1113,7 +1113,7 @@ public class SourceControlViewModel : ExtendedTool
         return author;
     }
 
-    public async Task<Identity?> GetIdentityManualAsync()
+    private async Task<Identity?> GetIdentityManualAsync()
     {
         if (CurrentRepo == null) return null;
 
@@ -1137,7 +1137,7 @@ public class SourceControlViewModel : ExtendedTool
         return new Identity(name, email);
     }
 
-    public async Task<Identity?> SetUserIdentityAsync(bool dialog)
+    private async Task<Identity?> SetUserIdentityAsync(bool dialog)
     {
         if (CurrentRepo == null) return null;
 
@@ -1160,7 +1160,7 @@ public class SourceControlViewModel : ExtendedTool
                     var globalConfig =
                         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
                             ".gitconfig");
-                    File.WriteAllText(globalConfig,
+                    await File.WriteAllTextAsync(globalConfig,
                         $"[user]\n\tname = {identity.Name}\n\temail = {identity.Email}\n", Encoding.UTF8);
                 }
                 catch (Exception e)

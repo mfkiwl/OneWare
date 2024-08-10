@@ -12,6 +12,7 @@ using Avalonia.Threading;
 using Dock.Model.Core;
 using Dock.Model.Mvvm.Controls;
 using ImTools;
+using OneWare.AiAssistant;
 using OneWare.Core.Data;
 using OneWare.Core.ViewModels.Windows;
 using OneWare.Core.Views.Windows;
@@ -53,6 +54,7 @@ public class DesktopStudioApp : StudioApp
         moduleCatalog.AddModule<CppModule>();
         moduleCatalog.AddModule<VhdlModule>();
         moduleCatalog.AddModule<VerilogModule>();
+        moduleCatalog.AddModule<AiAssistantModule>();
         moduleCatalog.AddModule<OssCadSuiteIntegrationModule>();
 
         try
