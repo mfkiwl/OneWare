@@ -7,6 +7,7 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Media;
 using ImTools;
 using OneWare.Core.Data;
+using OneWare.Core.Services;
 using OneWare.Core.Views.Windows;
 using OneWare.Demo.Desktop.ViewModels;
 using OneWare.Demo.Desktop.Views;
@@ -15,8 +16,6 @@ using OneWare.Essentials.Services;
 using OneWare.PackageManager;
 using OneWare.SourceControl;
 using OneWare.TerminalManager;
-using Prism.Ioc;
-using Prism.Modularity;
 
 namespace OneWare.Demo.Desktop;
 
@@ -26,18 +25,18 @@ public class DesktopDemoApp : DemoApp
     {
         base.ConfigureModuleCatalog(moduleCatalog);
 
-        moduleCatalog.AddModule<PackageManagerModule>();
-        moduleCatalog.AddModule<TerminalManagerModule>();
-        moduleCatalog.AddModule<SourceControlModule>();
+        moduleCatalog.AddPrismModule<PackageManagerModule>();
+        moduleCatalog.AddPrismModule<TerminalManagerModule>();
+        moduleCatalog.AddPrismModule<SourceControlModule>();
 
         try
         {
             var plugins = Directory.GetDirectories(Paths.PluginsDirectory);
-            foreach (var module in plugins) Container.Resolve<IPluginService>().AddPlugin(module);
+            foreach (var module in plugins) ContainerProvider.Resolve<IPluginService>().AddPlugin(module);
         }
         catch (Exception e)
         {
-            Container.Resolve<ILogger>().Error(e.Message, e);
+            ContainerProvider.Resolve<ILogger>().Error(e.Message, e);
         }
 
         var commandLineArgs = Environment.GetCommandLineArgs();
@@ -47,7 +46,7 @@ public class DesktopDemoApp : DemoApp
             if (m >= 0 && m < commandLineArgs.Length - 1)
             {
                 var path = commandLineArgs[m + 1];
-                Container.Resolve<IPluginService>().AddPlugin(path);
+                ContainerProvider.Resolve<IPluginService>().AddPlugin(path);
             }
         }
     }
@@ -61,7 +60,7 @@ public class DesktopDemoApp : DemoApp
         {
             splashWindow = new SplashWindow
             {
-                DataContext = Container.Resolve<SplashWindowViewModel>()
+                DataContext = ContainerProvider.Resolve<SplashWindowViewModel>()
             };
             splashWindow.Show();
         }
@@ -74,12 +73,12 @@ public class DesktopDemoApp : DemoApp
             {
                 if (Path.GetExtension(fileName).StartsWith(".", StringComparison.OrdinalIgnoreCase))
                 {
-                    var file = Container.Resolve<IProjectExplorerService>().GetTemporaryFile(fileName);
-                    _ = Container.Resolve<IDockService>().OpenFileAsync(file);
+                    var file = ContainerProvider.Resolve<IProjectExplorerService>().GetTemporaryFile(fileName);
+                    _ = ContainerProvider.Resolve<IDockService>().OpenFileAsync(file);
                 }
                 else
                 {
-                    Container.Resolve<ILogger>()?.Log("Could not load file " + fileName);
+                    ContainerProvider.Resolve<ILogger>()?.Log("Could not load file " + fileName);
                 }
             }
         }
@@ -87,11 +86,11 @@ public class DesktopDemoApp : DemoApp
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime)
             {
-                var key = Container.Resolve<IApplicationStateService>()
+                var key = ContainerProvider.Resolve<IApplicationStateService>()
                     .AddState("Loading last projects...", AppState.Loading);
-                await Container.Resolve<IProjectExplorerService>().OpenLastProjectsFileAsync();
-                Container.Resolve<IDockService>().InitializeContent();
-                Container.Resolve<IApplicationStateService>().RemoveState(key, "Projects loaded!");
+                await ContainerProvider.Resolve<IProjectExplorerService>().OpenLastProjectsFileAsync();
+                ContainerProvider.Resolve<IDockService>().InitializeContent();
+                ContainerProvider.Resolve<IApplicationStateService>().RemoveState(key, "Projects loaded!");
             }
         }
 
@@ -100,27 +99,28 @@ public class DesktopDemoApp : DemoApp
 
         try
         {
-            var settingsService = Container.Resolve<ISettingsService>();
-            Container.Resolve<ILogger>()?.Log("Loading last projects finished!", ConsoleColor.Cyan);
+            var settingsService = ContainerProvider.Resolve<ISettingsService>();
+            ContainerProvider.Resolve<ILogger>()?.Log("Loading last projects finished!", ConsoleColor.Cyan);
 
             if (settingsService.GetSettingValue<string>("LastVersion") != Global.VersionCode)
             {
                 settingsService.SetSettingValue("LastVersion", Global.VersionCode);
 
-                Container.Resolve<IWindowService>().ShowNotificationWithButton("Update Successful!",
-                    $"{Container.Resolve<IPaths>().AppName} got updated to {Global.VersionCode}!", "View Changelog",
-                    () => { Container.Resolve<IWindowService>().Show(new ChangelogView()); },
+                ContainerProvider.Resolve<IWindowService>().ShowNotificationWithButton("Update Successful!",
+                    $"{ContainerProvider.Resolve<IPaths>().AppName} got updated to {Global.VersionCode}!", "View Changelog",
+                    () =>
+                    {
+                        ContainerProvider.Resolve<IWindowService>().Show(new ChangelogView
+                        {
+                            DataContext = ContainerProvider.Resolve<ChangelogViewModel>()
+                        });
+                    },
                     Current?.FindResource("VsImageLib2019.StatusUpdateGrey16X") as IImage);
             }
-
-            //await Task.Factory.StartNew(() =>
-            //{
-            //_ = Global.PackageManagerViewModel.CheckForUpdateAsync();
-            //}, new CancellationToken(), TaskCreationOptions.None, PriorityScheduler.BelowNormal);
         }
         catch (Exception e)
         {
-            Container.Resolve<ILogger>().Error(e.Message, e);
+            ContainerProvider.Resolve<ILogger>().Error(e.Message, e);
         }
     }
 }

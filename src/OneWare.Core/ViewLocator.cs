@@ -2,8 +2,8 @@ using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Dock.Model.Core;
+using OneWare.Core.Services;
 using OneWare.Essentials.Services;
-using Prism.Ioc;
 
 namespace OneWare.Core;
 
@@ -20,13 +20,13 @@ public class ViewLocator : IDataTemplate
         {
             try
             {
-                var instance = ContainerLocator.Current.Resolve(type);
+                var instance = AutofacContainerProvider.Resolve(type);
                 if (instance != null)
                     return (Control)instance;
             }
             catch (Exception e)
             {
-                ContainerLocator.Current.Resolve<ILogger>().Error(e.Message, e);
+                AutofacContainerProvider.Resolve<ILogger>().Error(e.Message, e);
             }
 
             return new TextBlock { Text = "Create Instance Failed: " + type.FullName };

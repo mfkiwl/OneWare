@@ -29,6 +29,7 @@ public class UniversalFpgaProjectSystemModule : IModule
         var manager = containerProvider.Resolve<UniversalFpgaProjectManager>();
         var windowService = containerProvider.Resolve<IWindowService>();
         var settingsService = containerProvider.Resolve<ISettingsService>();
+        var paths = containerProvider.Resolve<IPaths>();
 
         settingsService.Register("UniversalFpgaProjectSystem_LongTermProgramming", false);
 
@@ -45,7 +46,7 @@ public class UniversalFpgaProjectSystemModule : IModule
                 Header = "Project",
                 Command = new AsyncRelayCommand(() => _ = manager.NewProjectDialogAsync()),
                 Icon = SharedConverters.PathToBitmapConverter.Convert(
-                    ContainerLocator.Container.Resolve<IPaths>().AppIconPath, typeof(Bitmap), null, null) as Bitmap
+                    paths.AppIconPath, typeof(Bitmap), null, null) as Bitmap
             });
 
         windowService.RegisterMenuItem("MainWindow_MainMenu/File/Open",
@@ -60,7 +61,7 @@ public class UniversalFpgaProjectSystemModule : IModule
                             Patterns = [$"*{UniversalFpgaProjectRoot.ProjectFileExtension}"]
                         })),
                 Icon = SharedConverters.PathToBitmapConverter.Convert(
-                    ContainerLocator.Container.Resolve<IPaths>().AppIconPath, typeof(Bitmap), null, null) as Bitmap
+                    paths.AppIconPath, typeof(Bitmap), null, null) as Bitmap
             });
 
         var toolBarViewModel = containerProvider.Resolve<UniversalFpgaProjectToolBarViewModel>();

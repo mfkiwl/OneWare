@@ -18,7 +18,6 @@ using OneWare.Essentials.Enums;
 using OneWare.Essentials.Models;
 using OneWare.Essentials.Services;
 using OneWare.Essentials.ViewModels;
-using Prism.Ioc;
 
 namespace OneWare.Core.Services;
 
@@ -29,16 +28,11 @@ public class DockService : Factory, IDockService
     private readonly Dictionary<string, Type> _documentViewRegistrations = new();
     private readonly Dictionary<string, Func<IFile, bool>> _fileOpenOverwrites = new();
     private readonly MainDocumentDockViewModel _mainDocumentDockViewModel;
-
     private readonly IPaths _paths;
     private readonly WelcomeScreenViewModel _welcomeScreenViewModel;
-
     public readonly Dictionary<DockShowLocation, List<Type>> LayoutRegistrations = new();
-
     private IExtendedDocument? _currentDocument;
-
     private IDisposable? _lastSub;
-
     private RootDock? _layout;
 
     public DockService(IPaths paths, IWindowService windowService, WelcomeScreenViewModel welcomeScreenViewModel,
@@ -47,9 +41,7 @@ public class DockService : Factory, IDockService
         _paths = paths;
         _welcomeScreenViewModel = welcomeScreenViewModel;
         _mainDocumentDockViewModel = mainDocumentDockViewModel;
-
         _documentViewRegistrations.Add("*", typeof(EditViewModel));
-
         windowService.RegisterMenuItem("MainWindow_MainMenu/View",
             new MenuItemViewModel("ResetLayout")
             {
@@ -124,7 +116,7 @@ public class DockService : Factory, IDockService
 
         _documentViewRegistrations.TryGetValue(pf.Extension, out var type);
         type ??= typeof(EditViewModel);
-        var viewModel = ContainerLocator.Current.Resolve(type, (typeof(string), pf.FullPath)) as IExtendedDocument;
+        var viewModel = AutofacContainerProvider.Resolve(type, (typeof(string), pf.FullPath)) as IExtendedDocument;
 
         if (viewModel == null) throw new NullReferenceException($"{type} could not be resolved!");
 
@@ -160,7 +152,7 @@ public class DockService : Factory, IDockService
         }
 
         return Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime
-            ? ContainerLocator.Container.Resolve<MainWindow>()
+            ? AutofacContainerProvider.Resolve<MainWindow>()
             : null;
     }
 
@@ -226,7 +218,7 @@ public class DockService : Factory, IDockService
         ContextLocator = new Dictionary<string, Func<object?>>();
         HostWindowLocator = new Dictionary<string, Func<IHostWindow?>>
         {
-            [nameof(IDockWindow)] = () => ContainerLocator.Container.Resolve<AdvancedHostWindow>()
+            [nameof(IDockWindow)] = () => AutofacContainerProvider.Resolve<AdvancedHostWindow>()
         };
         DockableLocator = new Dictionary<string, Func<IDockable?>>();
 
@@ -237,7 +229,7 @@ public class DockService : Factory, IDockService
 
     public void Show<T>(DockShowLocation location = DockShowLocation.Window) where T : IDockable
     {
-        Show(ContainerLocator.Container.Resolve<T>(), location);
+        Show(AutofacContainerProvider.Resolve<T>(), location);
     }
 
     public void Show(IDockable dockable, DockShowLocation location = DockShowLocation.Window)
@@ -276,7 +268,7 @@ public class DockService : Factory, IDockService
 
                 if (window != null)
                 {
-                    var mainWindow = ContainerLocator.Current.Resolve<MainWindow>();
+                    var mainWindow = AutofacContainerProvider.Resolve<MainWindow>();
                     AddWindow(Layout, window);
                     window.Height = 400;
                     window.Width = 600;
@@ -314,7 +306,7 @@ public class DockService : Factory, IDockService
             }
             catch (Exception e)
             {
-                ContainerLocator.Container.Resolve<ILogger>()
+                AutofacContainerProvider.Resolve<ILogger>()
                     ?.Log("Could not load layout from file! Loading default layout..." + e, ConsoleColor.Red);
             }
 

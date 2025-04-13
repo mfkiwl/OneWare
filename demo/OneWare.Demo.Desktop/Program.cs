@@ -5,9 +5,9 @@ using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Dialogs;
 using Avalonia.Media;
+using OneWare.Core.Services;
 using OneWare.Essentials.Helpers;
 using OneWare.Essentials.Services;
-using Prism.Ioc;
 
 namespace OneWare.Demo.Desktop;
 
@@ -19,21 +19,20 @@ internal abstract class Program
         var app = AppBuilder.Configure<DesktopDemoApp>().UsePlatformDetect()
             .With(new X11PlatformOptions
             {
-                EnableMultiTouch = true
+                EnableMultiTouch = true,
+                WmClass = "OneWare",
             })
             .With(new Win32PlatformOptions
             {
                 WinUICompositionBackdropCornerRadius = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                    ? Environment.OSVersion.Version.Build >= 22000 ? 8 : 0
-                    : 0
+                    ? Environment.OSVersion.Version.Build >= 22000 ? 8 : 0 : 0
             })
-            //.WithInterFont()
             .With(new FontManagerOptions
             {
                 DefaultFamilyName = "avares://OneWare.Core/Assets/Fonts#Noto Sans"
             })
             .LogToTrace();
-
+            
         if (DemoApp.SettingsService.GetSettingValue<bool>("Experimental_UseManagedFileDialog"))
             app.UseManagedSystemDialogs();
 
@@ -41,27 +40,25 @@ internal abstract class Program
     }
 
     [STAThread]
-    public static int Main(string[] args)
+    public static void Main(string[] args)
     {
         try
         {
-            return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
         catch (Exception ex)
         {
-            if (ContainerLocator.Container.IsRegistered<ILogger>())
-                ContainerLocator.Container?.Resolve<ILogger>()?.Error(ex.Message, ex, false);
-            else Console.WriteLine(ex.ToString());
-
-            PlatformHelper.WriteTextFile(
-                Path.Combine(DemoApp.Paths.CrashReportsDirectory,
-                    "crash_" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss", DateTimeFormatInfo.InvariantInfo) +
-                    ".txt"), ex.ToString());
+            var crashReport =
+                $"Version: 0.0.0 OS: {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}{Environment.NewLine}{ex}";
+                
+            if (AutofacContainerProvider.IsRegistered<ILogger>())
+                AutofacContainerProvider.Resolve<ILogger>()?.Error(ex.Message, ex, false);
+            else 
+                Console.WriteLine(crashReport);
+                
 #if DEBUG
             Console.ReadLine();
 #endif
         }
-
-        return 0;
     }
 }

@@ -6,9 +6,9 @@ using Avalonia;
 using Avalonia.Dialogs;
 using Avalonia.Media;
 using OneWare.Core.Data;
+using OneWare.Core.Services;
 using OneWare.Essentials.Helpers;
 using OneWare.Essentials.Services;
-using Prism.Ioc;
 
 namespace OneWare.Studio.Desktop;
 
@@ -53,9 +53,10 @@ internal abstract class Program
             var crashReport =
                 $"Version: {Global.VersionCode} OS: {RuntimeInformation.OSDescription} {RuntimeInformation.OSArchitecture}{Environment.NewLine}{ex}";
 
-            if (ContainerLocator.Container.IsRegistered<ILogger>())
-                ContainerLocator.Container?.Resolve<ILogger>()?.Error(ex.Message, ex, false);
-            else Console.WriteLine(crashReport);
+            if (AutofacContainerProvider.IsRegistered<ILogger>())
+                AutofacContainerProvider.Resolve<ILogger>()?.Error(ex.Message, ex, false);
+            else 
+                Console.WriteLine(crashReport);
 
             PlatformHelper.WriteTextFile(
                 Path.Combine(StudioApp.Paths.CrashReportsDirectory,

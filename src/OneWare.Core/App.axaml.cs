@@ -35,17 +35,15 @@ using OneWare.SearchList;
 using OneWare.Settings.ViewModels;
 using OneWare.Settings.Views;
 using OneWare.Toml;
-using Prism.DryIoc;
-using Prism.Ioc;
-using Prism.Modularity;
 using TextMateSharp.Grammars;
+using IContainer = Autofac.IContainer;
+using ModuleLogic = OneWare.Core.ModuleLogic;
 
 namespace OneWare.Core;
 
-public class App : PrismApplication
+public class App : AvaloniaAutofacApplication
 {
     protected bool _tempMode = false;
-    protected AggregateModuleCatalog ModuleCatalog { get; } = new();
 
     protected virtual string GetDefaultLayoutName => "Default";
 
@@ -57,8 +55,6 @@ public class App : PrismApplication
 
     protected override void RegisterTypes(IContainerRegistry containerRegistry)
     {
-        containerRegistry.RegisterInstance<IModuleCatalog>(ModuleCatalog);
-
         //Services
         containerRegistry.RegisterSingleton<IPluginService, PluginService>();
         containerRegistry.RegisterSingleton<IHttpService, HttpService>();
@@ -92,8 +88,8 @@ public class App : PrismApplication
     protected override AvaloniaObject CreateShell()
     {
         //Register IDE Settings
-        var settingsService = Container.Resolve<ISettingsService>();
-        var paths = Container.Resolve<IPaths>();
+        var settingsService = ContainerProvider.Resolve<ISettingsService>();
+        var paths = ContainerProvider.Resolve<IPaths>();
 
         Name = paths.AppName;
 
@@ -104,20 +100,20 @@ public class App : PrismApplication
                 new NativeMenuItem
                 {
                     Header = $"About {Name}",
-                    Command = new RelayCommand(() => Container.Resolve<IWindowService>().Show(
+                    Command = new RelayCommand(() => ContainerProvider.Resolve<IWindowService>().Show(
                         new AboutView
                         {
-                            DataContext = Container.Resolve<AboutViewModel>()
+                            DataContext = ContainerProvider.Resolve<AboutViewModel>()
                         }))
                 },
                 new NativeMenuItemSeparator(),
                 new NativeMenuItem
                 {
                     Header = "Settings",
-                    Command = new AsyncRelayCommand(() => Container.Resolve<IWindowService>().ShowDialogAsync(
+                    Command = new AsyncRelayCommand(() => ContainerProvider.Resolve<IWindowService>().ShowDialogAsync(
                         new ApplicationSettingsView
                         {
-                            DataContext = Container.Resolve<ApplicationSettingsViewModel>()
+                            DataContext = ContainerProvider.Resolve<ApplicationSettingsViewModel>()
                         }))
                 }
             }
@@ -179,8 +175,8 @@ public class App : PrismApplication
         settingsService.RegisterTitled("Editor", "Assistance", "TypeAssistance_EnableAutoFormatting",
             "Enable Auto Formatting", "Enable automatic formatting", true);
 
-        var windowService = Container.Resolve<IWindowService>();
-        var commandService = Container.Resolve<IApplicationCommandService>();
+        var windowService = ContainerProvider.Resolve<IWindowService>();
+        var commandService = ContainerProvider.Resolve<IApplicationCommandService>();
 
         windowService.RegisterMenuItem("MainWindow_MainMenu", new MenuItemViewModel("Help")
         {
@@ -198,7 +194,7 @@ public class App : PrismApplication
             IconObservable = Current!.GetResourceObservable("VsImageLib2019.StatusUpdateGrey16X"),
             Command = new RelayCommand(() => windowService.Show(new ChangelogView
             {
-                DataContext = Container.Resolve<ChangelogViewModel>()
+                DataContext = ContainerProvider.Resolve<ChangelogViewModel>()
             }))
         });
         windowService.RegisterMenuItem("MainWindow_MainMenu/Help", new MenuItemViewModel("About")
@@ -206,7 +202,7 @@ public class App : PrismApplication
             Header = $"About {paths.AppName}",
             Command = new RelayCommand(() => windowService.Show(new AboutView
             {
-                DataContext = Container.Resolve<AboutViewModel>()
+                DataContext = ContainerProvider.Resolve<AboutViewModel>()
             }))
         });
         windowService.RegisterMenuItem("MainWindow_MainMenu", new MenuItemViewModel("Extras")
@@ -220,7 +216,7 @@ public class App : PrismApplication
             IconObservable = Current!.GetResourceObservable("Material.SettingsOutline"),
             Command = new AsyncRelayCommand(() => windowService.ShowDialogAsync(new ApplicationSettingsView
             {
-                DataContext = ContainerLocator.Container.Resolve<ApplicationSettingsViewModel>()
+                DataContext = ContainerProvider.Resolve<ApplicationSettingsViewModel>()
             }))
         });
         windowService.RegisterMenuItem("MainWindow_MainMenu/Code", new MenuItemViewModel("Format")
@@ -228,16 +224,16 @@ public class App : PrismApplication
             Header = "Format",
             IconObservable = Current!.GetResourceObservable("BoxIcons.RegularCode"),
             Command = new RelayCommand(
-                () => (Container.Resolve<IDockService>().CurrentDocument as EditViewModel)?.Format(),
-                () => Container.Resolve<IDockService>().CurrentDocument is EditViewModel),
+                () => (ContainerProvider.Resolve<IDockService>().CurrentDocument as EditViewModel)?.Format(),
+                () => ContainerProvider.Resolve<IDockService>().CurrentDocument is EditViewModel),
             InputGesture = new KeyGesture(Key.Enter, KeyModifiers.Control | KeyModifiers.Alt)
         });
 
         windowService.RegisterMenuItem("MainWindow_MainMenu/File", new MenuItemViewModel("Save")
         {
             Command = new AsyncRelayCommand(
-                () => Container.Resolve<IDockService>().CurrentDocument!.SaveAsync(),
-                () => Container.Resolve<IDockService>().CurrentDocument is not null),
+                () => ContainerProvider.Resolve<IDockService>().CurrentDocument!.SaveAsync(),
+                () => ContainerProvider.Resolve<IDockService>().CurrentDocument is not null),
             Header = "Save Current",
             InputGesture = new KeyGesture(Key.S, PlatformHelper.ControlKey),
             IconObservable = Current!.GetResourceObservable("VsImageLib.Save16XMd")
@@ -248,14 +244,14 @@ public class App : PrismApplication
             Command = new RelayCommand(
                 () =>
                 {
-                    foreach (var file in Container.Resolve<IDockService>().OpenFiles) _ = file.Value.SaveAsync();
+                    foreach (var file in ContainerProvider.Resolve<IDockService>().OpenFiles) _ = file.Value.SaveAsync();
                 }),
             Header = "Save All",
             InputGesture = new KeyGesture(Key.S, PlatformHelper.ControlKey | KeyModifiers.Shift),
             IconObservable = Current!.GetResourceObservable("VsImageLib.SaveAll16X")
         });
 
-        var applicationCommandService = Container.Resolve<IApplicationCommandService>();
+        var applicationCommandService = ContainerProvider.Resolve<IApplicationCommandService>();
 
         applicationCommandService.RegisterCommand(new SimpleApplicationCommand("Active light theme",
             () =>
@@ -288,12 +284,12 @@ public class App : PrismApplication
 
         if (ApplicationLifetime is ISingleViewApplicationLifetime)
         {
-            var mainView = Container.Resolve<MainView>();
-            mainView.DataContext = ContainerLocator.Container.Resolve<MainWindowViewModel>();
+            var mainView = ContainerProvider.Resolve<MainView>();
+            mainView.DataContext = ContainerProvider.Resolve<MainWindowViewModel>();
             return mainView;
         }
 
-        var mainWindow = Container.Resolve<MainWindow>();
+        var mainWindow = ContainerProvider.Resolve<MainWindow>();
 
         mainWindow.Closing += (o, i) => _ = TryShutDownAsync(o, i);
 
@@ -302,24 +298,23 @@ public class App : PrismApplication
 
     protected override IModuleCatalog CreateModuleCatalog()
     {
-        return ModuleCatalog;
+        return new ModuleLogic.AggregateModuleCatalog();
     }
 
     protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
     {
-        moduleCatalog.AddModule<SearchListModule>();
-        moduleCatalog.AddModule<ErrorListModule>();
-        moduleCatalog.AddModule<OutputModule>();
-        moduleCatalog.AddModule<ProjectExplorerModule>();
-        moduleCatalog.AddModule<LibraryExplorerModule>();
-        moduleCatalog.AddModule<FolderProjectSystemModule>();
-        moduleCatalog.AddModule<ImageViewerModule>();
-        moduleCatalog.AddModule<JsonModule>();
-        moduleCatalog.AddModule<TomlModule>();
-        moduleCatalog.AddModule<DebuggerModule>();
-        moduleCatalog.AddModule<OneWareCloudIntegrationModule>();
-
-        base.ConfigureModuleCatalog(moduleCatalog);
+        // Add modules
+        moduleCatalog.AddModule(typeof(SearchListModule));
+        moduleCatalog.AddModule(typeof(ErrorListModule));
+        moduleCatalog.AddModule(typeof(OutputModule));
+        moduleCatalog.AddModule(typeof(ProjectExplorerModule));
+        moduleCatalog.AddModule(typeof(LibraryExplorerModule));
+        moduleCatalog.AddModule(typeof(FolderProjectSystemModule));
+        moduleCatalog.AddModule(typeof(ImageViewerModule));
+        moduleCatalog.AddModule(typeof(JsonModule));
+        moduleCatalog.AddModule(typeof(TomlModule));
+        moduleCatalog.AddModule(typeof(DebuggerModule));
+        moduleCatalog.AddModule(typeof(OneWareCloudIntegrationModule));
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -328,7 +323,7 @@ public class App : PrismApplication
         {
             DisableAvaloniaDataAnnotationValidation();
             
-            var mainWindow = Container.Resolve<MainWindow>();
+            var mainWindow = ContainerProvider.Resolve<MainWindow>();
             mainWindow.NotificationManager = new WindowNotificationManager(mainWindow)
             {
                 Position = NotificationPosition.TopRight,
@@ -338,19 +333,19 @@ public class App : PrismApplication
             };
         }
 
-        Container.Resolve<IApplicationCommandService>().LoadKeyConfiguration();
+        ContainerProvider.Resolve<IApplicationCommandService>().LoadKeyConfiguration();
 
-        Container.Resolve<ISettingsService>().GetSettingObservable<string>("General_SelectedTheme").Subscribe(x =>
+        ContainerProvider.Resolve<ISettingsService>().GetSettingObservable<string>("General_SelectedTheme").Subscribe(x =>
         {
             TypeAssistanceIconStore.Instance.Load();
         });
 
-        Container.Resolve<ILogger>().Log("Framework initialization complete!", ConsoleColor.Green);
-        Container.Resolve<BackupService>().LoadAutoSaveFile();
-        Container.Resolve<IDockService>().LoadLayout(GetDefaultLayoutName);
-        Container.Resolve<BackupService>().Init();
+        ContainerProvider.Resolve<ILogger>().Log("Framework initialization complete!", ConsoleColor.Green);
+        ContainerProvider.Resolve<BackupService>().LoadAutoSaveFile();
+        ContainerProvider.Resolve<IDockService>().LoadLayout(GetDefaultLayoutName);
+        ContainerProvider.Resolve<BackupService>().Init();
 
-        Container.Resolve<ISettingsService>().GetSettingObservable<string>("Editor_FontFamily").Subscribe(x =>
+        ContainerProvider.Resolve<ISettingsService>().GetSettingObservable<string>("Editor_FontFamily").Subscribe(x =>
         {
             if (FontManager.Current.SystemFonts.Contains(x))
             {
@@ -362,7 +357,7 @@ public class App : PrismApplication
             if (findFont && resourceFont is FontFamily fFamily) Resources["EditorFont"] = this.FindResource(x);
         });
 
-        Container.Resolve<ISettingsService>().GetSettingObservable<int>("Editor_FontSize").Subscribe(x =>
+        ContainerProvider.Resolve<ISettingsService>().GetSettingObservable<int>("Editor_FontSize").Subscribe(x =>
         {
             Resources["EditorFontSize"] = (double)x;
         });
@@ -384,11 +379,11 @@ public class App : PrismApplication
         {
             var unsavedFiles = new List<IExtendedDocument>();
 
-            foreach (var tab in Container.Resolve<IDockService>().OpenFiles)
+            foreach (var tab in ContainerProvider.Resolve<IDockService>().OpenFiles)
                 if (tab.Value is { IsDirty: true } evm)
                     unsavedFiles.Add(evm);
 
-            var mainWin = MainWindow as Window;
+            var mainWin = ContainerProvider.Resolve<MainWindow>() as Window;
             if (mainWin == null) throw new NullReferenceException(nameof(mainWin));
             var shutdownReady = await WindowHelper.HandleUnsavedFilesAsync(unsavedFiles, mainWin);
 
@@ -396,7 +391,7 @@ public class App : PrismApplication
         }
         catch (Exception ex)
         {
-            Container.Resolve<ILogger>().Error(ex.Message, ex);
+            ContainerProvider.Resolve<ILogger>().Error(ex.Message, ex);
         }
     }
 
@@ -407,24 +402,24 @@ public class App : PrismApplication
                 win.Hide();
 
         //DockService.ProjectFiles.SaveLastProjectData();
-        Container.Resolve<BackupService>().CleanUp();
+        ContainerProvider.Resolve<BackupService>().CleanUp();
 
-        await Container.Resolve<LanguageManager>().CleanResourcesAsync();
+        await ContainerProvider.Resolve<LanguageManager>().CleanResourcesAsync();
 
-        if (!_tempMode) await Container.Resolve<IProjectExplorerService>().SaveLastProjectsFileAsync();
+        if (!_tempMode) await ContainerProvider.Resolve<IProjectExplorerService>().SaveLastProjectsFileAsync();
 
         //if (LaunchUpdaterOnExit) Global.PackageManagerViewModel.VhdPlusUpdaterModel.LaunchUpdater(); TODO
 
-        Container.Resolve<ILogger>()?.Log("Closed!", ConsoleColor.DarkGray);
+        ContainerProvider.Resolve<ILogger>()?.Log("Closed!", ConsoleColor.DarkGray);
 
         //Save active layout
-        if (!_tempMode) Container.Resolve<IDockService>().SaveLayout();
+        if (!_tempMode) ContainerProvider.Resolve<IDockService>().SaveLayout();
 
         //Save settings
-        Container.Resolve<ISettingsService>().Save(Container.Resolve<IPaths>().SettingsPath);
+        ContainerProvider.Resolve<ISettingsService>().Save(ContainerProvider.Resolve<IPaths>().SettingsPath);
 
         //Execute ShutdownActions, like starting the updater
-        Container.Resolve<IApplicationStateService>().ExecuteShutdownActions();
+        ContainerProvider.Resolve<IApplicationStateService>().ExecuteShutdownActions();
 
         Environment.Exit(0);
     }

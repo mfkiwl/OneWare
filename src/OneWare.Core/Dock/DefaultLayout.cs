@@ -3,7 +3,7 @@ using Dock.Model.Mvvm.Controls;
 using OneWare.Core.Services;
 using OneWare.Core.ViewModels.DockViews;
 using OneWare.Essentials.Enums;
-using Prism.Ioc;
+using OneWare.Essentials.Services;
 
 namespace OneWare.Core.Dock;
 
@@ -12,7 +12,7 @@ public static class DefaultLayout
     private static IList<IDockable> ConvertRegistration(IEnumerable<Type>? types, IFactory factory)
     {
         var bottomToolsResolved = types?
-            .Select(x => ContainerLocator.Container.Resolve(x))
+            .Select(x => AutofacContainerProvider.Resolve(x))
             .Cast<IDockable>();
 
         return bottomToolsResolved == null
@@ -22,10 +22,11 @@ public static class DefaultLayout
 
     public static RootDock GetDefaultLayout(DockService dockService)
     {
-        var documentDock = ContainerLocator.Container.Resolve<MainDocumentDockViewModel>();
+        var documentDock = AutofacContainerProvider.Resolve<MainDocumentDockViewModel>();
         documentDock.ActiveDockable = null;
         documentDock.FocusedDockable = null;
         documentDock.VisibleDockables?.Clear();
+
         dockService.LayoutRegistrations.TryGetValue(DockShowLocation.Left, out var leftTools);
         dockService.LayoutRegistrations.TryGetValue(DockShowLocation.Bottom, out var bottomTools);
 

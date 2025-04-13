@@ -10,19 +10,14 @@ using OneWare.Settings;
 using OneWare.UniversalFpgaProjectSystem;
 using OneWare.UniversalFpgaProjectSystem.Services;
 using OneWare.Vcd.Viewer;
-using Prism.Ioc;
-using Prism.Modularity;
 
 namespace OneWare.Studio;
 
 public class StudioApp : App
 {
     public static readonly ISettingsService SettingsService = new SettingsService();
-
     public static readonly IProjectSettingsService ProjectSettingsService = new ProjectSettingsService();
-
     public static readonly IPaths Paths = new Paths("OneWare Studio", "avares://OneWare.Studio/Assets/icon.ico");
-
     private static readonly ILogger Logger = new Logger(Paths);
 
     static StudioApp()
@@ -63,9 +58,10 @@ public class StudioApp : App
     protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
     {
         base.ConfigureModuleCatalog(moduleCatalog);
-        moduleCatalog.AddModule<UniversalFpgaProjectSystemModule>();
-        moduleCatalog.AddModule<VcdViewerModule>();
-        moduleCatalog.AddModule<CruviAdapterExtensionsModule>();
-        //moduleCatalog.AddModule<ChatBotModule>();
+
+        moduleCatalog.AddPrismModule<UniversalFpgaProjectSystemModule>();
+        moduleCatalog.AddPrismModule<VcdViewerModule>();
+        moduleCatalog.AddPrismModule<CruviAdapterExtensionsModule>();
+        //moduleCatalog.AddPrismModule<ChatBotModule>();
     }
 }

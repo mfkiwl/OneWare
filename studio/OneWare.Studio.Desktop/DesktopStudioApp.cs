@@ -14,6 +14,7 @@ using Dock.Model.Core;
 using Dock.Model.Mvvm.Controls;
 using ImTools;
 using OneWare.Core.Data;
+using OneWare.Core.Services;
 using OneWare.Core.ViewModels.Windows;
 using OneWare.Core.Views.Windows;
 using OneWare.Cpp;
@@ -33,8 +34,6 @@ using OneWare.Updater.ViewModels;
 using OneWare.Updater.Views;
 using OneWare.Verilog;
 using OneWare.Vhdl;
-using Prism.Ioc;
-using Prism.Modularity;
 
 namespace OneWare.Studio.Desktop;
 
@@ -45,17 +44,15 @@ public class DesktopStudioApp : StudioApp
     protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
     {
         base.ConfigureModuleCatalog(moduleCatalog);
-
-        moduleCatalog.AddModule<UpdaterModule>();
-        moduleCatalog.AddModule<PackageManagerModule>();
-        moduleCatalog.AddModule<TerminalManagerModule>();
-        moduleCatalog.AddModule<SourceControlModule>();
-        moduleCatalog.AddModule<SerialMonitorModule>();
-        moduleCatalog.AddModule<CppModule>();
-        moduleCatalog.AddModule<VhdlModule>();
-        moduleCatalog.AddModule<VerilogModule>();
-        moduleCatalog.AddModule<OssCadSuiteIntegrationModule>();
-
+        moduleCatalog.AddPrismModule<UpdaterModule>();
+        moduleCatalog.AddPrismModule<PackageManagerModule>();
+        moduleCatalog.AddPrismModule<TerminalManagerModule>();
+        moduleCatalog.AddPrismModule<SourceControlModule>();
+        moduleCatalog.AddPrismModule<SerialMonitorModule>();
+        moduleCatalog.AddPrismModule<CppModule>();
+        moduleCatalog.AddPrismModule<VhdlModule>();
+        moduleCatalog.AddPrismModule<VerilogModule>();
+        moduleCatalog.AddPrismModule<OssCadSuiteIntegrationModule>();
         try
         {
             var commandLineArgs = Environment.GetCommandLineArgs();
@@ -65,16 +62,15 @@ public class DesktopStudioApp : StudioApp
                 if (m >= 0 && m < commandLineArgs.Length - 1)
                 {
                     var path = commandLineArgs[m + 1];
-                    Container.Resolve<IPluginService>().AddPlugin(path);
+                    ContainerProvider.Resolve<IPluginService>().AddPlugin(path);
                 }
             }
-
             var plugins = Directory.GetDirectories(Paths.PluginsDirectory);
-            foreach (var module in plugins) Container.Resolve<IPluginService>().AddPlugin(module);
+            foreach (var module in plugins) ContainerProvider.Resolve<IPluginService>().AddPlugin(module);
         }
         catch (Exception e)
         {
-            Container.Resolve<ILogger>().Error(e.Message, e);
+            ContainerProvider.Resolve<ILogger>().Error(e.Message, e);
         }
     }
 
@@ -85,22 +81,19 @@ public class DesktopStudioApp : StudioApp
         {
             _splashWindow = new SplashWindow
             {
-                DataContext = Container.Resolve<SplashWindowViewModel>()
+                DataContext = ContainerProvider.Resolve<SplashWindowViewModel>()
             };
             _splashWindow.Show();
             _splashWindow.Activate();
         }
-
         base.OnFrameworkInitializationCompleted();
     }
 
     protected override async Task LoadContentAsync()
     {
-        Container.Resolve<IPackageService>().RegisterPackageRepository(
+        ContainerProvider.Resolve<IPackageService>().RegisterPackageRepository(
             $"https://raw.githubusercontent.com/one-ware/OneWare.PublicPackages/main/oneware-packages.json");
-
         var arguments = Environment.GetCommandLineArgs();
-
         if (arguments.Length > 1 && !arguments[1].StartsWith("--"))
         {
             var fileName = arguments[1];
@@ -108,30 +101,25 @@ public class DesktopStudioApp : StudioApp
             if (File.Exists(fileName))
             {
                 _tempMode = true;
-                var dockService = Container.Resolve<IDockService>();
-
+                var dockService = ContainerProvider.Resolve<IDockService>();
                 var views = dockService.SearchView<Document>();
-
                 foreach (var view in views.ToArray())
                     if (view is IDockable dockable)
                         dockService.CloseDockable(dockable);
-
                 var extension = Path.GetExtension(fileName);
-
-                var manager = Container.Resolve<IProjectManagerService>().GetManagerByExtension(extension);
-
+                var manager = ContainerProvider.Resolve<IProjectManagerService>().GetManagerByExtension(extension);
                 if (manager != null)
                 {
-                    await Container.Resolve<IProjectExplorerService>().LoadProjectAsync(fileName, manager);
+                    await ContainerProvider.Resolve<IProjectExplorerService>().LoadProjectAsync(fileName, manager);
                 }
                 else if (extension.StartsWith(".", StringComparison.OrdinalIgnoreCase))
                 {
-                    var file = Container.Resolve<IProjectExplorerService>().GetTemporaryFile(fileName);
-                    _ = Container.Resolve<IDockService>().OpenFileAsync(file);
+                    var file = ContainerProvider.Resolve<IProjectExplorerService>().GetTemporaryFile(fileName);
+                    _ = ContainerProvider.Resolve<IDockService>().OpenFileAsync(file);
                 }
                 else
                 {
-                    Container.Resolve<ILogger>()?.Warning("Could not load file/directory " + fileName);
+                    ContainerProvider.Resolve<ILogger>()?.Warning("Could not load file/directory " + fileName);
                 }
             }
         }
@@ -139,77 +127,65 @@ public class DesktopStudioApp : StudioApp
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime)
             {
-                var key = Container.Resolve<IApplicationStateService>()
+                var key = ContainerProvider.Resolve<IApplicationStateService>()
                     .AddState("Loading last projects...", AppState.Loading);
-                await Container.Resolve<IProjectExplorerService>().OpenLastProjectsFileAsync();
-                Container.Resolve<IDockService>().InitializeContent();
-                Container.Resolve<IApplicationStateService>().RemoveState(key, "Projects loaded!");
-                Container.Resolve<ILogger>()?.Log("Loading last projects finished!", ConsoleColor.Cyan);
+                await ContainerProvider.Resolve<IProjectExplorerService>().OpenLastProjectsFileAsync();
+                ContainerProvider.Resolve<IDockService>().InitializeContent();
+                ContainerProvider.Resolve<IApplicationStateService>().RemoveState(key, "Projects loaded!");
+                ContainerProvider.Resolve<ILogger>()?.Log("Loading last projects finished!", ConsoleColor.Cyan);
             }
         }
-
         await Task.Delay(1000);
-
         _splashWindow?.Close();
-
         try
         {
-            var settingsService = Container.Resolve<ISettingsService>();
-
+            var settingsService = ContainerProvider.Resolve<ISettingsService>();
             if (Version.TryParse(settingsService.GetSettingValue<string>("LastVersion"), out var lastVersion) &&
                 lastVersion < Assembly.GetExecutingAssembly().GetName().Version)
             {
                 settingsService.SetSettingValue("LastVersion", Global.VersionCode);
-
-                Container.Resolve<IWindowService>().ShowNotificationWithButton("Update Successful!",
-                    $"{Container.Resolve<IPaths>().AppName} got updated to {Global.VersionCode}!", "View Changelog",
+                ContainerProvider.Resolve<IWindowService>().ShowNotificationWithButton("Update Successful!",
+                    $"{ContainerProvider.Resolve<IPaths>().AppName} got updated to {Global.VersionCode}!", "View Changelog",
                     () =>
                     {
-                        Container.Resolve<IWindowService>().Show(new ChangelogView
+                        ContainerProvider.Resolve<IWindowService>().Show(new ChangelogView
                         {
-                            DataContext = Container.Resolve<ChangelogViewModel>()
+                            DataContext = ContainerProvider.Resolve<ChangelogViewModel>()
                         });
                     },
                     Current?.FindResource("VsImageLib2019.StatusUpdateGrey16X") as IImage);
             }
-
-            var packageService = Container.Resolve<IPackageService>();
-
+            var packageService = ContainerProvider.Resolve<IPackageService>();
             await packageService.LoadPackagesAsync();
-
             var updatePackages = packageService.Packages
                 .Where(x => x.Value.Status == PackageStatus.UpdateAvailable)
                 .Select(x => x.Value)
                 .ToList();
-
             if (updatePackages.Count > 0)
-                Container.Resolve<IWindowService>().ShowNotificationWithButton("Package Updates Available",
+                ContainerProvider.Resolve<IWindowService>().ShowNotificationWithButton("Package Updates Available",
                     $"Updates for {string.Join(", ", updatePackages.Select(x => x.Package.Name))} available!",
-                    "Download", () => Container.Resolve<IWindowService>().Show(new PackageManagerView
+                    "Download", () => ContainerProvider.Resolve<IWindowService>().Show(new PackageManagerView
                     {
-                        DataContext = Container.Resolve<PackageManagerViewModel>()
+                        DataContext = ContainerProvider.Resolve<PackageManagerViewModel>()
                     }),
                     Current?.FindResource("VsImageLib2019.StatusUpdateGrey16X") as IImage);
-
-            var ideUpdater = Container.Resolve<UpdaterViewModel>();
-
+            var ideUpdater = ContainerProvider.Resolve<UpdaterViewModel>();
             var canUpdate = await ideUpdater.CheckForUpdateAsync();
-
             if (canUpdate)
                 Dispatcher.UIThread.Post(() =>
                 {
-                    Container.Resolve<IWindowService>().ShowNotificationWithButton("Update Available",
-                        $"{Paths.AppName} {ideUpdater.NewVersion} is available!", "Download", () => Container
+                    ContainerProvider.Resolve<IWindowService>().ShowNotificationWithButton("Update Available",
+                        $"{Paths.AppName} {ideUpdater.NewVersion} is available!", "Download", () => ContainerProvider
                             .Resolve<IWindowService>().Show(new UpdaterView
                             {
-                                DataContext = Container.Resolve<UpdaterViewModel>()
+                                DataContext = ContainerProvider.Resolve<UpdaterViewModel>()
                             }),
                         Current?.FindResource("VsImageLib2019.StatusUpdateGrey16X") as IImage);
                 });
         }
         catch (Exception e)
         {
-            Container.Resolve<ILogger>().Error(e.Message, e);
+            ContainerProvider.Resolve<ILogger>().Error(e.Message, e);
         }
     }
 }
