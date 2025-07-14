@@ -4,12 +4,13 @@ using OneWare.Essentials.Services;
 using OneWare.UniversalFpgaProjectSystem.Services;
 using OneWare.Vhdl.Parsing;
 using OneWare.Vhdl.Templates;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
+
 
 namespace OneWare.Vhdl;
 
-public class VhdlModule : IModule
+public class VhdlModule : IAutofacModule
 {
     public const string LspName = "RustHDL";
     public const string LspPathSetting = "VhdlModule_RustHdlPath";
@@ -234,33 +235,33 @@ public class VhdlModule : IModule
         ]
     };
 
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void RegisterTypes(ContainerBuilder builder)
     {
     }
 
-    public void OnInitialized(IContainerProvider containerProvider)
+    public void OnInitialized(IComponentContext context)
     {
-        containerProvider.Resolve<IPackageService>().RegisterPackage(RustHdlPackage);
+        context.Resolve<IPackageService>().RegisterPackage(RustHdlPackage);
 
-        containerProvider.Resolve<ISettingsService>().RegisterTitledFilePath("Languages", "VHDL", LspPathSetting,
+        context.Resolve<ISettingsService>().RegisterTitledFilePath("Languages", "VHDL", LspPathSetting,
             "RustHDL Path", "Path for RustHDL executable", "",
-            null, containerProvider.Resolve<IPaths>().PackagesDirectory, File.Exists, PlatformHelper.ExeFile);
+            null, context.Resolve<IPaths>().PackagesDirectory, File.Exists, PlatformHelper.ExeFile);
         
-        containerProvider.Resolve<ISettingsService>().RegisterTitled("Languages", "VHDL", EnableSnippetsSetting,
+        context.Resolve<ISettingsService>().RegisterTitled("Languages", "VHDL", EnableSnippetsSetting,
             "Enable Snippets", "Enable snippets that provide rich completion. These are not smart or context based.", true);
 
-        containerProvider.Resolve<IErrorService>().RegisterErrorSource(LspName);
-        containerProvider.Resolve<ILanguageManager>().RegisterTextMateLanguage("vhdl",
+        context.Resolve<IErrorService>().RegisterErrorSource(LspName);
+        context.Resolve<ILanguageManager>().RegisterTextMateLanguage("vhdl",
             "avares://OneWare.Vhdl/Assets/vhdl.tmLanguage.json", ".vhd", ".vhdl");
-        containerProvider.Resolve<ILanguageManager>()
+        context.Resolve<ILanguageManager>()
             .RegisterService(typeof(LanguageServiceVhdl), true, ".vhd", ".vhdl");
 
-        containerProvider.Resolve<FpgaService>().RegisterNodeProvider<VhdlNodeProvider>(".vhd", ".vhdl");
+        context.Resolve<FpgaService>().RegisterNodeProvider<VhdlNodeProvider>(".vhd", ".vhdl");
 
-        containerProvider.Resolve<FpgaService>().RegisterTemplate<VhdlBlinkTemplate>();
-        containerProvider.Resolve<FpgaService>().RegisterTemplate<VhdlBlinkSimulationTemplate>();
+        context.Resolve<FpgaService>().RegisterTemplate<VhdlBlinkTemplate>();
+        context.Resolve<FpgaService>().RegisterTemplate<VhdlBlinkSimulationTemplate>();
 
-        // containerProvider.Resolve<IProjectExplorerService>().RegisterConstructContextMenu((x,l) =>
+        // context.Resolve<IProjectExplorerService>().RegisterConstructContextMenu((x,l) =>
         // {
         //     if (x is [UniversalProjectRoot root])
         //     {

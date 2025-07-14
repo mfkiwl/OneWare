@@ -6,22 +6,23 @@ using OneWare.Essentials.Services;
 using OneWare.Essentials.ViewModels;
 using OneWare.LibraryExplorer.ViewModels;
 using OneWare.ProjectExplorer.ViewModels;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
+
 
 namespace OneWare.LibraryExplorer;
 
-public class LibraryExplorerModule : IModule
+public class LibraryExplorerModule : IAutofacModule
 {
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void RegisterTypes(ContainerBuilder builder)
     {
-        containerRegistry.RegisterSingleton<LibraryExplorerViewModel>();
+        builder.RegisterType<LibraryExplorerViewModel>();
     }
 
-    public void OnInitialized(IContainerProvider containerProvider)
+    public void OnInitialized(IComponentContext context)
     {
-        var dockService = containerProvider.Resolve<IDockService>();
-        var windowService = containerProvider.Resolve<IWindowService>();
+        var dockService = context.Resolve<IDockService>();
+        var windowService = context.Resolve<IWindowService>();
 
         dockService.RegisterLayoutExtension<LibraryExplorerViewModel>(DockShowLocation.Left);
         
@@ -30,7 +31,7 @@ public class LibraryExplorerModule : IModule
             {
                 Header = "Library Explorer",
                 Command =
-                    new RelayCommand(() => dockService.Show(containerProvider.Resolve<LibraryExplorerViewModel>())),
+                    new RelayCommand(() => dockService.Show(context.Resolve<LibraryExplorerViewModel>())),
                 IconObservable = Application.Current!.GetResourceObservable(LibraryExplorerViewModel.IconKey)
             });
     }

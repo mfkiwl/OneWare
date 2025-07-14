@@ -5,37 +5,37 @@ using OneWare.CloudIntegration.ViewModels;
 using OneWare.CloudIntegration.Views;
 using OneWare.Essentials.Models;
 using OneWare.Essentials.Services;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
 
 namespace OneWare.CloudIntegration;
 
-public class OneWareCloudIntegrationModule : IModule
+public class OneWareCloudIntegrationModule : IAutofacModule
 {
     public const string OneWareCloudHostKey = "General_OneWareCloud_Host";
     public const string OneWareAccountEmailKey = "General_OneWareCloud_AccountEmail";
     public const string CredentialStore = "https://cloud.one-ware.com";
     
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void RegisterTypes(ContainerBuilder builder)
     {
-        containerRegistry.RegisterSingleton<OneWareCloudAccountSettingViewModel>();
-        containerRegistry.RegisterSingleton<OneWareCloudLoginService>();
-        containerRegistry.RegisterSingleton<OneWareCloudNotificationService>();
+        builder.RegisterType<OneWareCloudAccountSettingViewModel>().AsSelf().SingleInstance();
+        builder.RegisterType<OneWareCloudLoginService>().AsSelf().SingleInstance();
+        builder.RegisterType<OneWareCloudNotificationService>().AsSelf().SingleInstance();
     }
 
-    public void OnInitialized(IContainerProvider containerProvider)
+    public void OnInitialized(IComponentContext context)
     {
         if(RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             Environment.SetEnvironmentVariable("GCM_CREDENTIAL_STORE", "secretservice");
         
-        containerProvider.Resolve<ISettingsService>().RegisterSetting("General", "OneWare Cloud", OneWareCloudHostKey, new TextBoxSetting("Host", "https://cloud.one-ware.com", "https://cloud.one-ware.com"));
+        context.Resolve<ISettingsService>().RegisterSetting("General", "OneWare Cloud", OneWareCloudHostKey, new TextBoxSetting("Host", "https://cloud.one-ware.com", "https://cloud.one-ware.com"));
         
-        containerProvider.Resolve<ISettingsService>().RegisterCustom("General", "OneWare Cloud", OneWareAccountEmailKey, new OneWareCloudAccountSetting());
+        context.Resolve<ISettingsService>().RegisterCustom("General", "OneWare Cloud", OneWareAccountEmailKey, new OneWareCloudAccountSetting());
         
-        containerProvider.Resolve<IWindowService>().RegisterUiExtension("MainWindow_BottomRightExtension", new UiExtension(x =>
+        context.Resolve<IWindowService>().RegisterUiExtension("MainWindow_BottomRightExtension", new UiExtension(x =>
             new CloudIntegrationMainWindowBottomRightExtension()
             {
-                DataContext = containerProvider.Resolve<CloudIntegrationMainWindowBottomRightExtensionViewModel>()
+                DataContext = context.Resolve<CloudIntegrationMainWindowBottomRightExtensionViewModel>()
             }));
     }
 }

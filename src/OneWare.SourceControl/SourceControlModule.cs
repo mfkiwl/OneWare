@@ -9,26 +9,26 @@ using OneWare.Essentials.ViewModels;
 using OneWare.SourceControl.Settings;
 using OneWare.SourceControl.ViewModels;
 using OneWare.SourceControl.Views;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
 
 namespace OneWare.SourceControl;
 
-public class SourceControlModule : IModule
+public class SourceControlModule : IAutofacModule
 {
     public const string GitHubAccountNameKey = "SourceControl_GitHub_AccountName";
     
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void RegisterTypes(ContainerBuilder builder)
     {
-        containerRegistry.Register<CompareFileViewModel>();
-        containerRegistry.RegisterSingleton<SourceControlViewModel>();
-        containerRegistry.RegisterSingleton<GitHubAccountSettingViewModel>();
+        builder.RegisterType<CompareFileViewModel>().AsSelf();
+        builder.RegisterType<SourceControlViewModel>().AsSelf().SingleInstance();
+        builder.RegisterType<GitHubAccountSettingViewModel>().AsSelf().SingleInstance();
     }
 
-    public void OnInitialized(IContainerProvider containerProvider)
+    public void OnInitialized(IComponentContext context)
     {
-        var settingsService = containerProvider.Resolve<ISettingsService>();
-        var windowService = containerProvider.Resolve<IWindowService>();
+        var settingsService = context.Resolve<ISettingsService>();
+        var windowService = context.Resolve<IWindowService>();
 
         if(RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             Environment.SetEnvironmentVariable("GCM_CREDENTIAL_STORE", "secretservice");
@@ -46,17 +46,17 @@ public class SourceControlModule : IModule
             "Poll changes interval", "Interval in seconds", 5, 1, 60, 1);
         
 
-        var dockService = containerProvider.Resolve<IDockService>();
+        var dockService = context.Resolve<IDockService>();
         dockService.RegisterLayoutExtension<SourceControlViewModel>(DockShowLocation.Left);
 
         windowService.RegisterMenuItem("MainWindow_MainMenu/View/Tool Windows", new MenuItemViewModel("SourceControl")
         {
             Header = "Source Control",
-            Command = new RelayCommand(() => dockService.Show(containerProvider.Resolve<SourceControlViewModel>())),
+            Command = new RelayCommand(() => dockService.Show(context.Resolve<SourceControlViewModel>())),
             IconObservable = Application.Current!.GetResourceObservable(SourceControlViewModel.IconKey)
         });
 
-        if (containerProvider.Resolve<SourceControlViewModel>() is not { } vm) return;
+        if (context.Resolve<SourceControlViewModel>() is not { } vm) return;
 
         windowService.RegisterUiExtension("MainWindow_BottomRightExtension", new UiExtension(x =>
             new SourceControlMainWindowBottomRightExtension

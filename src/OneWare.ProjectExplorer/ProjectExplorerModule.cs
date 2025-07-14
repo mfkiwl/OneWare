@@ -8,26 +8,27 @@ using OneWare.Essentials.ViewModels;
 using OneWare.ProjectExplorer.Services;
 using OneWare.ProjectExplorer.ViewModels;
 using OneWare.ProjectExplorer.Views;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
+
 
 namespace OneWare.ProjectExplorer;
 
-public class ProjectExplorerModule : IModule
+public class ProjectExplorerModule : IAutofacModule
 {
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void RegisterTypes(ContainerBuilder builder)
     {
-        containerRegistry.RegisterSingleton<IFileWatchService, FileWatchService>();
+        builder.RegisterType<IFileWatchService, FileWatchService>();
         containerRegistry.RegisterManySingleton<ProjectExplorerViewModel>(typeof(IProjectExplorerService),
             typeof(ProjectExplorerViewModel));
     }
 
-    public void OnInitialized(IContainerProvider containerProvider)
+    public void OnInitialized(IComponentContext context)
     {
-        if (containerProvider.Resolve<IProjectExplorerService>() is not ProjectExplorerViewModel vm) return;
+        if (context.Resolve<IProjectExplorerService>() is not ProjectExplorerViewModel vm) return;
 
-        var dockService = containerProvider.Resolve<IDockService>();
-        var windowService = containerProvider.Resolve<IWindowService>();
+        var dockService = context.Resolve<IDockService>();
+        var windowService = context.Resolve<IWindowService>();
 
         dockService.RegisterLayoutExtension<IProjectExplorerService>(DockShowLocation.Left);
 
@@ -64,7 +65,7 @@ public class ProjectExplorerModule : IModule
             {
                 Header = "Project Explorer",
                 Command =
-                    new RelayCommand(() => dockService.Show(containerProvider.Resolve<IProjectExplorerService>())),
+                    new RelayCommand(() => dockService.Show(context.Resolve<IProjectExplorerService>())),
                 IconObservable = Application.Current!.GetResourceObservable(ProjectExplorerViewModel.IconKey)
             });
     }

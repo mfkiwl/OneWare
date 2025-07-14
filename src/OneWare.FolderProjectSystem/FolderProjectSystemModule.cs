@@ -4,31 +4,32 @@ using CommunityToolkit.Mvvm.Input;
 using OneWare.Essentials.Services;
 using OneWare.Essentials.ViewModels;
 using OneWare.FolderProjectSystem.Models;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
+
 
 namespace OneWare.FolderProjectSystem;
 
-public class FolderProjectSystemModule : IModule
+public class FolderProjectSystemModule : IAutofacModule
 {
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void RegisterTypes(ContainerBuilder builder)
     {
     }
 
-    public void OnInitialized(IContainerProvider containerProvider)
+    public void OnInitialized(IComponentContext context)
     {
-        var manager = containerProvider.Resolve<FolderProjectManager>();
+        var manager = context.Resolve<FolderProjectManager>();
 
         containerProvider
             .Resolve<IProjectManagerService>()
             .RegisterProjectManager(FolderProjectRoot.ProjectType, manager);
 
-        containerProvider.Resolve<IWindowService>().RegisterMenuItem("MainWindow_MainMenu/File/Open",
+        context.Resolve<IWindowService>().RegisterMenuItem("MainWindow_MainMenu/File/Open",
             new MenuItemViewModel("Folder")
             {
                 Header = "Folder",
                 Command = new RelayCommand(() =>
-                    _ = containerProvider.Resolve<IProjectExplorerService>().LoadProjectFolderDialogAsync(manager)),
+                    _ = context.Resolve<IProjectExplorerService>().LoadProjectFolderDialogAsync(manager)),
                 IconObservable = Application.Current!.GetResourceObservable("VsImageLib.OpenFolder16X")
             });
     }

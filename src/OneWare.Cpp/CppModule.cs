@@ -1,12 +1,13 @@
 ﻿using OneWare.Essentials.Helpers;
 using OneWare.Essentials.PackageManager;
 using OneWare.Essentials.Services;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
+
 
 namespace OneWare.Cpp;
 
-public class CppModule : IModule
+public class CppModule : IAutofacModule
 {
     public const string LspName = "clangd";
     public const string LspPathSetting = "CppModule_ClangdPath";
@@ -179,21 +180,21 @@ public class CppModule : IModule
         ]
     };
 
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void RegisterTypes(ContainerBuilder builder)
     {
     }
 
-    public void OnInitialized(IContainerProvider containerProvider)
+    public void OnInitialized(IComponentContext context)
     {
-        containerProvider.Resolve<IPackageService>().RegisterPackage(ClangdPackage);
+        context.Resolve<IPackageService>().RegisterPackage(ClangdPackage);
 
-        containerProvider.Resolve<ISettingsService>().RegisterTitledFilePath("Languages", "C++", LspPathSetting,
+        context.Resolve<ISettingsService>().RegisterTitledFilePath("Languages", "C++", LspPathSetting,
             "Clangd Path", "Path for clangd executable", "", null,
-            containerProvider.Resolve<IPaths>().NativeToolsDirectory, File.Exists, PlatformHelper.ExeFile);
+            context.Resolve<IPaths>().NativeToolsDirectory, File.Exists, PlatformHelper.ExeFile);
 
-        containerProvider.Resolve<IErrorService>().RegisterErrorSource(LspName);
+        context.Resolve<IErrorService>().RegisterErrorSource(LspName);
 
-        containerProvider.Resolve<ILanguageManager>()
+        context.Resolve<ILanguageManager>()
             .RegisterService(typeof(LanguageServiceCpp), false, ".cpp", ".h", ".c", ".hpp");
     }
 }

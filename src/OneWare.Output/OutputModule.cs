@@ -5,12 +5,13 @@ using OneWare.Essentials.Enums;
 using OneWare.Essentials.Services;
 using OneWare.Essentials.ViewModels;
 using OneWare.Output.ViewModels;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
+
 
 namespace OneWare.Output;
 
-public class OutputModule : IModule
+public class OutputModule : IAutofacModule
 {
     private readonly IDockService _dockService;
     private readonly ISettingsService _settingsService;
@@ -23,13 +24,13 @@ public class OutputModule : IModule
         _dockService = dockService;
     }
 
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void RegisterTypes(ContainerBuilder builder)
     {
         containerRegistry.RegisterManySingleton<OutputViewModel>(typeof(IOutputService),
             typeof(OutputViewModel));
     }
 
-    public void OnInitialized(IContainerProvider containerProvider)
+    public void OnInitialized(IComponentContext context)
     {
         _dockService.RegisterLayoutExtension<IOutputService>(DockShowLocation.Bottom);
 
@@ -38,7 +39,7 @@ public class OutputModule : IModule
         _windowService.RegisterMenuItem("MainWindow_MainMenu/View/Tool Windows", new MenuItemViewModel("Output")
         {
             Header = "Output",
-            Command = new RelayCommand(() => _dockService.Show(containerProvider.Resolve<IOutputService>())),
+            Command = new RelayCommand(() => _dockService.Show(context.Resolve<IOutputService>())),
             IconObservable = Application.Current!.GetResourceObservable(OutputViewModel.IconKey)
         });
     }

@@ -35,61 +35,76 @@ using OneWare.SearchList;
 using OneWare.Settings.ViewModels;
 using OneWare.Settings.Views;
 using OneWare.Toml;
-using Prism.DryIoc;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using TextMateSharp.Grammars;
 
 namespace OneWare.Core;
 
-public class App : PrismApplication
+public class App : Application
 {
     protected bool _tempMode = false;
-    protected AggregateModuleCatalog ModuleCatalog { get; } = new();
+    protected AutofacModuleManager ModuleManager { get; private set; } = null!;
+    protected ContainerBuilder Builder { get; private set; } = null!;
+    protected IContainer Container { get; private set; } = null!;
 
     protected virtual string GetDefaultLayoutName => "Default";
 
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
-        base.Initialize();
+        
+        // Initialize Autofac
+        Builder = new ContainerBuilder();
+        ModuleManager = new AutofacModuleManager(Builder);
+        
+        RegisterTypes(Builder);
+        ConfigureModules();
+        
+        Container = Builder.Build();
+        ContainerLocator.SetContainer(Container);
+        ModuleManager.InitializeModules(Container);
+        
+        // Create shell after modules are initialized
+        CreateShell();
     }
 
-    protected override void RegisterTypes(IContainerRegistry containerRegistry)
+    protected virtual void RegisterTypes(ContainerBuilder builder)
     {
-        containerRegistry.RegisterInstance<IModuleCatalog>(ModuleCatalog);
+        // Register module manager
+        builder.RegisterInstance(ModuleManager).AsSelf().SingleInstance();
 
         //Services
-        containerRegistry.RegisterSingleton<IPluginService, PluginService>();
-        containerRegistry.RegisterSingleton<IHttpService, HttpService>();
-        containerRegistry.RegisterSingleton<IApplicationCommandService, ApplicationCommandService>();
-        containerRegistry.RegisterSingleton<IProjectManagerService, ProjectManagerService>();
-        containerRegistry.RegisterSingleton<ILanguageManager, LanguageManager>();
-        containerRegistry.RegisterSingleton<IApplicationStateService, ApplicationStateService>();
-        containerRegistry.RegisterSingleton<IDockService, DockService>();
-        containerRegistry.RegisterSingleton<IWindowService, WindowService>();
-        containerRegistry.RegisterSingleton<IModuleTracker, ModuleTracker>();
-        containerRegistry.RegisterSingleton<BackupService>();
-        containerRegistry.RegisterSingleton<IChildProcessService, ChildProcessService>();
-        containerRegistry.RegisterSingleton<IFileIconService, FileIconService>();
-        containerRegistry.RegisterSingleton<IEnvironmentService, EnvironmentService>();
+        builder.RegisterType<PluginService>().As<IPluginService>().SingleInstance();
+        builder.RegisterType<HttpService>().As<IHttpService>().SingleInstance();
+        builder.RegisterType<ApplicationCommandService>().As<IApplicationCommandService>().SingleInstance();
+        builder.RegisterType<ProjectManagerService>().As<IProjectManagerService>().SingleInstance();
+        builder.RegisterType<LanguageManager>().As<ILanguageManager>().SingleInstance();
+        builder.RegisterType<ApplicationStateService>().As<IApplicationStateService>().SingleInstance();
+        builder.RegisterType<DockService>().As<IDockService>().SingleInstance();
+        builder.RegisterType<WindowService>().As<IWindowService>().SingleInstance();
+        builder.RegisterType<ModuleTracker>().As<IModuleTracker>().SingleInstance();
+        builder.RegisterType<BackupService>().AsSelf().SingleInstance();
+        builder.RegisterType<ChildProcessService>().As<IChildProcessService>().SingleInstance();
+        builder.RegisterType<FileIconService>().As<IFileIconService>().SingleInstance();
+        builder.RegisterType<EnvironmentService>().As<IEnvironmentService>().SingleInstance();
 
         //ViewModels - Singletons
-        containerRegistry.RegisterSingleton<MainWindowViewModel>();
-        containerRegistry.RegisterSingleton<MainDocumentDockViewModel>();
+        builder.RegisterType<MainWindowViewModel>().AsSelf().SingleInstance();
+        builder.RegisterType<MainDocumentDockViewModel>().AsSelf().SingleInstance();
 
         //ViewModels Transients
-        containerRegistry.Register<WelcomeScreenViewModel>();
-        containerRegistry.Register<EditViewModel>();
-        containerRegistry.Register<ChangelogViewModel>();
-        containerRegistry.Register<AboutViewModel>();
+        builder.RegisterType<WelcomeScreenViewModel>().AsSelf();
+        builder.RegisterType<EditViewModel>().AsSelf();
+        builder.RegisterType<ChangelogViewModel>().AsSelf();
+        builder.RegisterType<AboutViewModel>().AsSelf();
 
         //Windows
-        containerRegistry.RegisterSingleton<MainWindow>();
-        containerRegistry.RegisterSingleton<MainView>();
+        builder.RegisterType<MainWindow>().AsSelf().SingleInstance();
+        builder.RegisterType<MainView>().AsSelf().SingleInstance();
     }
 
-    protected override AvaloniaObject CreateShell()
+    protected virtual AvaloniaObject CreateShell()
     {
         //Register IDE Settings
         var settingsService = Container.Resolve<ISettingsService>();
@@ -318,26 +333,19 @@ public class App : PrismApplication
         return mainWindow;
     }
 
-    protected override IModuleCatalog CreateModuleCatalog()
+    protected virtual void ConfigureModules()
     {
-        return ModuleCatalog;
-    }
-
-    protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
-    {
-        moduleCatalog.AddModule<SearchListModule>();
-        moduleCatalog.AddModule<ErrorListModule>();
-        moduleCatalog.AddModule<OutputModule>();
-        moduleCatalog.AddModule<ProjectExplorerModule>();
-        moduleCatalog.AddModule<LibraryExplorerModule>();
-        moduleCatalog.AddModule<FolderProjectSystemModule>();
-        moduleCatalog.AddModule<ImageViewerModule>();
-        moduleCatalog.AddModule<JsonModule>();
-        moduleCatalog.AddModule<TomlModule>();
-        moduleCatalog.AddModule<DebuggerModule>();
-        moduleCatalog.AddModule<OneWareCloudIntegrationModule>();
-
-        base.ConfigureModuleCatalog(moduleCatalog);
+        ModuleManager.AddModule<SearchListModule>();
+        ModuleManager.AddModule<ErrorListModule>();
+        ModuleManager.AddModule<OutputModule>();
+        ModuleManager.AddModule<ProjectExplorerModule>();
+        ModuleManager.AddModule<LibraryExplorerModule>();
+        ModuleManager.AddModule<FolderProjectSystemModule>();
+        ModuleManager.AddModule<ImageViewerModule>();
+        ModuleManager.AddModule<JsonModule>();
+        ModuleManager.AddModule<TomlModule>();
+        ModuleManager.AddModule<DebuggerModule>();
+        ModuleManager.AddModule<OneWareCloudIntegrationModule>();
     }
 
     public override void OnFrameworkInitializationCompleted()

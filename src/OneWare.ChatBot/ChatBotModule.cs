@@ -5,29 +5,30 @@ using OneWare.ChatBot.ViewModels;
 using OneWare.Essentials.Enums;
 using OneWare.Essentials.Services;
 using OneWare.Essentials.ViewModels;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
+
 
 namespace OneWare.ChatBot;
 
-public class ChatBotModule : IModule
+public class ChatBotModule : IAutofacModule
 {
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void RegisterTypes(ContainerBuilder builder)
     {
-        containerRegistry.RegisterSingleton<ChatBotViewModel>();
+        builder.RegisterType<ChatBotViewModel>();
     }
 
-    public void OnInitialized(IContainerProvider containerProvider)
+    public void OnInitialized(IComponentContext context)
     {
-        var dockService = containerProvider.Resolve<IDockService>();
-        var windowService = containerProvider.Resolve<IWindowService>();
+        var dockService = context.Resolve<IDockService>();
+        var windowService = context.Resolve<IWindowService>();
         
         dockService.RegisterLayoutExtension<ChatBotViewModel>(DockShowLocation.Bottom);
         
         windowService.RegisterMenuItem("MainWindow_MainMenu/View/Tool Windows", new MenuItemViewModel("ChatBot")
         {
             Header = "OneAI Chat",
-            Command = new RelayCommand(() => dockService.Show(containerProvider.Resolve<ChatBotViewModel>())),
+            Command = new RelayCommand(() => dockService.Show(context.Resolve<ChatBotViewModel>())),
             IconObservable = Application.Current!.GetResourceObservable(ChatBotViewModel.IconKey) ,
         });
     }

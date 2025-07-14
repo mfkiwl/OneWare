@@ -6,37 +6,31 @@ using OneWare.Essentials.Helpers;
 using OneWare.Essentials.Services;
 using OneWare.Essentials.ViewModels;
 using OneWare.SearchList.ViewModels;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
 
 namespace OneWare.SearchList;
 
-public class SearchListModule : IModule
+public class SearchListModule : IAutofacModule
 {
-    private readonly IDockService _dockService;
-    private readonly IWindowService _windowService;
-
-    public SearchListModule(IWindowService windowService, IDockService dockService)
+    public void RegisterTypes(ContainerBuilder builder)
     {
-        _windowService = windowService;
-        _dockService = dockService;
+        builder.RegisterType<SearchListViewModel>().AsSelf().SingleInstance();
     }
 
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void OnInitialized(IComponentContext context)
     {
-        containerRegistry.RegisterSingleton<SearchListViewModel>();
-    }
-
-    public void OnInitialized(IContainerProvider containerProvider)
-    {
-        _windowService.RegisterMenuItem("MainWindow_MainMenu/View/Tool Windows", new MenuItemViewModel("Search")
+        var windowService = context.Resolve<IWindowService>();
+        var dockService = context.Resolve<IDockService>();
+        
+        windowService.RegisterMenuItem("MainWindow_MainMenu/View/Tool Windows", new MenuItemViewModel("Search")
         {
             Header = "Search",
             Command = new RelayCommand(() =>
             {
-                var vm = containerProvider.Resolve<SearchListViewModel>();
+                var vm = context.Resolve<SearchListViewModel>();
                 vm.SearchString = string.Empty;
-                _dockService.Show(vm);
+                dockService.Show(vm);
             }),
             IconObservable = Application.Current!.GetResourceObservable(SearchListViewModel.IconKey),
             InputGesture = new KeyGesture(Key.F, KeyModifiers.Shift | PlatformHelper.ControlKey)

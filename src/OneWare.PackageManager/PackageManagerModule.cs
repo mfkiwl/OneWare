@@ -7,29 +7,30 @@ using OneWare.Essentials.ViewModels;
 using OneWare.PackageManager.Services;
 using OneWare.PackageManager.ViewModels;
 using OneWare.PackageManager.Views;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
+
 
 namespace OneWare.PackageManager;
 
-public class PackageManagerModule : IModule
+public class PackageManagerModule : IAutofacModule
 {
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void RegisterTypes(ContainerBuilder builder)
     {
-        containerRegistry.RegisterSingleton<IPackageService, PackageService>();
-        containerRegistry.RegisterSingleton<PackageManagerViewModel>();
+        builder.RegisterType<PackageService>().As<IPackageService>().SingleInstance();
+        builder.RegisterType<PackageManagerViewModel>().AsSelf().SingleInstance();
     }
 
-    public void OnInitialized(IContainerProvider containerProvider)
+    public void OnInitialized(IComponentContext context)
     {
-        var windowService = containerProvider.Resolve<IWindowService>();
+        var windowService = context.Resolve<IWindowService>();
 
         windowService.RegisterMenuItem("MainWindow_MainMenu/Extras", new MenuItemViewModel("Extensions")
         {
             Header = "Extensions",
             Command = new RelayCommand(() => windowService.Show(new PackageManagerView
             {
-                DataContext = containerProvider.Resolve<PackageManagerViewModel>()
+                DataContext = context.Resolve<PackageManagerViewModel>()
             })),
             IconObservable = Application.Current!.GetResourceObservable("PackageManager")
         });

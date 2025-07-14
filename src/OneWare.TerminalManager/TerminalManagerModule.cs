@@ -5,29 +5,30 @@ using OneWare.Essentials.Enums;
 using OneWare.Essentials.Services;
 using OneWare.Essentials.ViewModels;
 using OneWare.TerminalManager.ViewModels;
-using Prism.Ioc;
-using Prism.Modularity;
+using Autofac;
+using OneWare.Core.ModuleLogic;
+
 
 namespace OneWare.TerminalManager;
 
-public class TerminalManagerModule : IModule
+public class TerminalManagerModule : IAutofacModule
 {
-    public void RegisterTypes(IContainerRegistry containerRegistry)
+    public void RegisterTypes(ContainerBuilder builder)
     {
-        containerRegistry.RegisterSingleton<TerminalManagerViewModel>();
+        builder.RegisterType<TerminalManagerViewModel>();
     }
 
-    public void OnInitialized(IContainerProvider containerProvider)
+    public void OnInitialized(IComponentContext context)
     {
-        containerProvider.Resolve<IDockService>()
+        context.Resolve<IDockService>()
             .RegisterLayoutExtension<TerminalManagerViewModel>(DockShowLocation.Bottom);
-        containerProvider.Resolve<IWindowService>().RegisterMenuItem("MainWindow_MainMenu/View/Tool Windows",
+        context.Resolve<IWindowService>().RegisterMenuItem("MainWindow_MainMenu/View/Tool Windows",
             new MenuItemViewModel("Terminal")
             {
                 Header = "Terminal",
                 Command = new RelayCommand(() =>
-                    containerProvider.Resolve<IDockService>()
-                        .Show(containerProvider.Resolve<TerminalManagerViewModel>())),
+                    context.Resolve<IDockService>()
+                        .Show(context.Resolve<TerminalManagerViewModel>())),
                 IconObservable = Application.Current!.GetResourceObservable(TerminalManagerViewModel.IconKey)
             });
     }
